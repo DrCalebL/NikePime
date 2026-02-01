@@ -15,15 +15,15 @@
 
 ## Protocol Version History
 
-| Era | Focus | Key Feature |
-|-----|-------|-------------|
-| Byron (2017) | Foundation | Basic transactions, federated consensus |
-| Shelley (2020) | Decentralization | Stake pools, delegation, rewards |
-| Allegra (2020) | Token locking | Time-lock scripts |
-| Mary (2021) | Multi-asset | Native tokens without smart contracts |
-| Alonzo (2021) | Smart contracts | Plutus scripts on mainnet |
-| Babbage (2022) | Optimization | Plutus V2, reference scripts, inline datums |
-| Chang (2024) | Governance | On-chain governance, DReps, Constitutional Committee |
+| Era            | Focus            | Key Feature                                          |
+| -------------- | ---------------- | ---------------------------------------------------- |
+| Byron (2017)   | Foundation       | Basic transactions, federated consensus              |
+| Shelley (2020) | Decentralization | Stake pools, delegation, rewards                     |
+| Allegra (2020) | Token locking    | Time-lock scripts                                    |
+| Mary (2021)    | Multi-asset      | Native tokens without smart contracts                |
+| Alonzo (2021)  | Smart contracts  | Plutus scripts on mainnet                            |
+| Babbage (2022) | Optimization     | Plutus V2, reference scripts, inline datums          |
+| Chang (2024)   | Governance       | On-chain governance, DReps, Constitutional Committee |
 
 ## Founding Entities
 
@@ -42,15 +42,15 @@
 
 ## Quick Comparison Stats
 
-| Feature | Cardano | Ethereum | Solana | Bitcoin |
-|---------|---------|----------|--------|---------|
-| Consensus | Ouroboros PoS | Gasper PoS | Tower BFT/PoH | Nakamoto PoW |
-| Block time | ~20s | ~12s | ~0.4s | ~10min |
-| Tx model | eUTxO | Account | Account | UTXO |
-| Native tokens | Yes (ledger-level) | No (ERC-20 contracts) | No (SPL programs) | No |
-| Smart contracts | Plutus (Haskell) | Solidity/Vyper | Rust/C | Bitcoin Script |
-| Slashing | No | Yes | Yes | N/A |
-| Formal methods | Yes (core protocol) | Partial | No | Minimal |
+| Feature         | Cardano             | Ethereum              | Solana            | Bitcoin        |
+| --------------- | ------------------- | --------------------- | ----------------- | -------------- |
+| Consensus       | Ouroboros PoS       | Gasper PoS            | Tower BFT/PoH     | Nakamoto PoW   |
+| Block time      | ~20s                | ~12s                  | ~0.4s             | ~10min         |
+| Tx model        | eUTxO               | Account               | Account           | UTXO           |
+| Native tokens   | Yes (ledger-level)  | No (ERC-20 contracts) | No (SPL programs) | No             |
+| Smart contracts | Plutus (Haskell)    | Solidity/Vyper        | Rust/C            | Bitcoin Script |
+| Slashing        | No                  | Yes                   | Yes               | N/A            |
+| Formal methods  | Yes (core protocol) | Partial               | No                | Minimal        |
 
 ## Key Ecosystem Projects
 
