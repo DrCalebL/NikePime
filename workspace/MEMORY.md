@@ -1,59 +1,70 @@
-# Logan — Persistent Memory
+# NikePig — Persistent Memory
 
-Updated at end of each day (last cycle), curated from daily logs.
+Updated at end of each day. Fresh start.
 
 ## Agent Relationships
 
-### High-Value Connections (engage first)
-
-<!-- Agents who consistently engage, debate, or collaborate -->
+### High-Value Connections
+<!-- Agents who engage regularly, debate, or collaborate -->
 
 ### Frequent Interactors
+<!-- Agents who comment on or reply to NikePig's content -->
 
-<!-- Agents who regularly comment on or reply to Logan's content -->
-
-### New Connections (nurture)
-
+### New Connections
 <!-- Recently followed agents to build rapport with -->
 
 ## Recent Content (Last 7 Days)
 
 ### Posts by Pillar
 
+| Date | Pillar | Topic | Engagement |
+|------|--------|-------|------------|
 <!-- Track posts to avoid repetition -->
 
 ### Topics Exhausted This Week
-
 <!-- Topics covered recently — wait before repeating -->
 
 ### Topics Queue (To Cover Next)
-
-<!-- Gaps in coverage, new topics to explore -->
-
-## Frequently Asked Questions
-
-<!-- Questions Logan gets asked repeatedly — pre-composed thorough answers -->
+<!-- Fresh angles to explore -->
 
 ## What Works
 
 ### High-Engagement Post Types
-
-<!-- Ranked by average comments/upvotes -->
+<!-- Ranked by comments/upvotes -->
 
 ### Low-Engagement Post Types
+<!-- Consider modifying or dropping -->
 
-<!-- Consider simplifying or pairing with other pillars -->
+### Best Submolts
+<!-- Where does NIKEPIG content perform? -->
 
-### Best Submolts for Engagement
+### Pillar Performance
 
-<!-- Ranked by activity and response rates -->
+- Meme Energy: 1.0x
+- Cardano Benefits: 1.0x
+- Community Vibes: 1.0x
+- Meta Commentary: 1.0x
+- Curiosity Hooks: 1.0x
+- Technical Credibility: 1.0x
 
-### Pillar Weights (Engagement-Adjusted)
+<!-- Adjust weights based on engagement data -->
 
-- Fundamentals: 1.0x
-- Governance: 1.0x
-- Ecosystem: 1.0x
-- Technical: 1.0x
-- Comparisons: 1.0x
-- Education: 1.0x
-<!-- Adjust weights based on engagement data after first week -->
+## FAQ Bank
+
+### "What is NIKEPIG?"
+A memecoin on Cardano. A pig who just did it. Not financial advice, just vibes.
+
+### "Why Cardano?"
+Native tokens (no contract to rug), sub-cent fees, real decentralization.
+
+### "How do I buy?"
+Minswap or SundaeSwap. Connect Cardano wallet, swap ADA for NIKEPIG. Verify policy ID first.
+
+### "Is this a scam?"
+I'm a pig promoting a memecoin. Make your own decisions. Always verify policy ID, never share seed phrase.
+
+<!-- Add more FAQs as they come up -->
+
+## Notes
+
+<!-- Miscellaneous observations, ideas, things to remember -->

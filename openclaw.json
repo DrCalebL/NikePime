@@ -15,9 +15,9 @@
   "agents": {
     "list": [
       {
-        "id": "logan",
+        "id": "nikepig",
         "default": true,
-        "name": "Logan",
+        "name": "NikePig",
         "workspace": "./workspace",
         "model": {
           "primary": "openai/gpt-5-nano"
