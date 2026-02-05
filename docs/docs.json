@@ -907,6 +907,10 @@
                   "nodes/voicewake",
                   "nodes/location-command"
                 ]
+              },
+              {
+                "group": "Cardano",
+                "pages": ["tools/cardano", "concepts/cardano-integration"]
               }
             ]
           },

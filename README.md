@@ -6,7 +6,7 @@ A Cardano-focused AI agent on [Moltbook](https://moltbook.com), the social netwo
 
 ## What is this
 
-Logan is an autonomous Cardano educator that lives on Moltbook. He posts technical explainers, governance updates, ecosystem news, and fair cross-chain comparisons, all grounded in a 41-file knowledge base queried via hybrid RAG. Marine biology analogies are his signature. Price predictions are not.
+Logan is an autonomous Cardano educator that lives on Moltbook. He posts technical explainers, governance updates, ecosystem news, and fair cross-chain comparisons, all grounded in a 62-file knowledge base queried via hybrid RAG. Marine biology analogies are his signature. Price predictions are not.
 
 This repository is a fork of the [OpenClaw monorepo](https://github.com/openclaw/openclaw) with Logan's workspace, knowledge base, skill definition, and design specs layered on top.
 
@@ -47,6 +47,83 @@ Five agent tools (`sokosumi_list_agents`, `sokosumi_get_agent`, `sokosumi_get_in
 
 For Logan, this means delegating research tasks to specialized Sokosumi agents (Statista data lookups, GWI audience insights) and folding their results into posts. Sokosumi agents carry verifiable on-chain identities (DIDs) and all job interactions are traceable.
 
+## Cardano ecosystem tools
+
+32 tools across 8 integrations for querying Cardano blockchain data, swapping tokens, resolving handles, and reading governance proposals. All tools load automatically and work without API keys (though you'll hit rate limits quickly without them).
+
+| Integration    | Tools | What it does                                                                          |
+| -------------- | ----- | ------------------------------------------------------------------------------------- |
+| **TapTools**   | 5     | Token prices, holder distributions, NFT collection stats, DEX volume, trending assets |
+| **Cexplorer**  | 5     | Address balances, transaction details, stake pool info, epoch stats, search           |
+| **Ada Handle** | 4     | Resolve $handles to addresses, reverse lookup, metadata, availability check           |
+| **CSWAP**      | 4     | Liquidity pools, token prices, swap estimates, pool depth                             |
+| **Metera**     | 3     | Index tokens, composition, performance metrics                                        |
+| **GovCircle**  | 3     | Governance circles, proposals, voting records                                         |
+| **ADA Anvil**  | 4     | Mint tokens, burn tokens, create NFT collections, minting history                     |
+| **NABU VPN**   | 3     | VPN node listing, node stats, service status                                          |
+
+Example: check SNEK price and estimate a swap
+
+```typescript
+// Get SNEK price
+const price = await agent.callTool("taptools_get_token_price", {
+  policy_id: "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f",
+  asset_name: "534e454b",
+});
+// { price: "0.0025", change_24h: "5.25", volume_24h: "125000" }
+
+// Estimate swapping 1000 ADA for SNEK
+const estimate = await agent.callTool("cswap_estimate_swap", {
+  input_token: "ada",
+  output_token: "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f",
+  amount: "1000000000",
+});
+// { output_amount: "4000000000", price_impact: "0.15", fee: "3000000" }
+```
+
+Example: resolve a handle and check wallet balance
+
+```typescript
+// Who owns $charles?
+const addr = await agent.callTool("handle_resolve", { handle: "charles" });
+// { handle: "charles", address: "addr1qy8ac7qqy...", policy_id: "f0ff48..." }
+
+// What's in that wallet?
+const info = await agent.callTool("cexplorer_get_address", {
+  address: addr.address,
+  include_txs: true,
+});
+// { balance: "5000000000", tx_count: 42, stake_address: "stake1u..." }
+```
+
+API keys go in environment variables:
+
+```bash
+export TAPTOOLS_API_KEY=tt_xxxx
+export CEXPLORER_API_KEY=cx_xxxx
+export ADA_HANDLE_API_KEY=ah_xxxx
+export CSWAP_API_KEY=cs_xxxx
+export METERA_API_KEY=mt_xxxx
+export GOVCIRCLE_API_KEY=gc_xxxx
+export ADA_ANVIL_API_KEY=av_xxxx
+export NABU_VPN_API_KEY=nb_xxxx
+```
+
+Or in `openclaw.json`:
+
+```json
+{
+  "tools": {
+    "taptools": { "apiKey": "tt_xxxx" },
+    "cexplorer": { "apiKey": "cx_xxxx" },
+    "adaHandle": { "apiKey": "ah_xxxx" },
+    "cswap": { "apiKey": "cs_xxxx" }
+  }
+}
+```
+
+Full documentation: [`docs/tools/cardano.md`](docs/tools/cardano.md)
+
 ## Repository structure
 
 The ELL-specific files live in `workspace/`, `openspec/`, and `openclaw.json`. Everything else is the upstream OpenClaw monorepo.
@@ -62,7 +139,7 @@ dancesWithClaws/
 │   ├── MEMORY.md                          # Persistent memory (relationships, content history, pillar weights)
 │   ├── logs/daily/                        # Append-only daily activity logs (YYYY-MM-DD.md)
 │   │
-│   ├── knowledge/                         # 41 Cardano RAG files
+│   ├── knowledge/                         # 62 Cardano RAG files
 │   │   ├── fundamentals/                  # 8 files
 │   │   │   ├── ouroboros-pos.md
 │   │   │   ├── eutxo-model.md
@@ -79,7 +156,7 @@ dancesWithClaws/
 │   │   │   ├── dreps.md
 │   │   │   ├── constitutional-committee.md
 │   │   │   └── chang-hard-fork.md
-│   │   ├── ecosystem/                     # 10 files
+│   │   ├── ecosystem/                     # 31 files
 │   │   │   ├── defi-protocols.md
 │   │   │   ├── nft-ecosystem.md
 │   │   │   ├── stablecoins.md
@@ -523,16 +600,16 @@ Posts rotate across six pillars, weighted by engagement:
 
 ## Knowledge base
 
-41 markdown files across 6 categories, indexed by OpenClaw's `memorySearch`:
+62 markdown files across 6 categories, indexed by OpenClaw's `memorySearch`:
 
-| Category        | Files | Topics                                                                                          |
-| --------------- | ----- | ----------------------------------------------------------------------------------------------- |
-| `fundamentals/` | 8     | Ouroboros, eUTxO, Plutus, Marlowe, Hydra, Mithril, architecture, consensus                      |
-| `governance/`   | 6     | Voltaire, CIPs, Catalyst, DReps, Constitutional Committee, Chang                                |
-| `ecosystem/`    | 10    | DeFi, NFTs, stablecoins, oracles, dev tools, sidechains, adoption, partners, wallets, community |
-| `technical/`    | 8     | Formal verification, Haskell, native tokens, staking, parameters, security, tokenomics, bridges |
-| `history/`      | 4     | Roadmap eras, milestones, founding entities, recent developments                                |
-| `comparisons/`  | 5     | vs Ethereum, vs Solana, vs Bitcoin, PoS landscape, competitive advantages                       |
+| Category        | Files | Topics                                                                                                                                                                                                   |
+| --------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fundamentals/` | 8     | Ouroboros, eUTxO, Plutus, Marlowe, Hydra, Mithril, architecture, consensus                                                                                                                               |
+| `governance/`   | 6     | Voltaire, CIPs, Catalyst, DReps, Constitutional Committee, Chang                                                                                                                                         |
+| `ecosystem/`    | 31    | DeFi, NFTs, stablecoins, oracles, dev tools, sidechains, adoption, partners, wallets, community, plus tool integrations (TapTools, Cexplorer, Ada Handle, CSWAP, Metera, GovCircle, ADA Anvil, NABU VPN) |
+| `technical/`    | 8     | Formal verification, Haskell, native tokens, staking, parameters, security, tokenomics, bridges                                                                                                          |
+| `history/`      | 4     | Roadmap eras, milestones, founding entities, recent developments                                                                                                                                         |
+| `comparisons/`  | 5     | vs Ethereum, vs Solana, vs Bitcoin, PoS landscape, competitive advantages                                                                                                                                |
 
 Search is hybrid: BM25 keyword matching (30% weight) + vector similarity via `text-embedding-3-small` (70% weight). Candidate multiplier of 4x ensures good recall before reranking.
 
