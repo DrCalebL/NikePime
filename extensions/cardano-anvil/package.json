@@ -1,0 +1,18 @@
+{
+  "name": "@openclaw/cardano-anvil",
+  "version": "1.0.0",
+  "description": "ADA Anvil minting integration for OpenClaw",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.33.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

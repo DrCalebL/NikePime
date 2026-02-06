@@ -6,6 +6,7 @@ import { resolveSessionAgentId } from "./agent-scope.js";
 import { createAgentsListTool } from "./tools/agents-list-tool.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 import { createCanvasTool } from "./tools/canvas-tool.js";
+import { createCardanoTools } from "./tools/cardano/index.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
@@ -93,6 +94,7 @@ export function createOpenClawTools(options?: {
       currentThreadTs: options?.currentThreadTs,
       replyToMode: options?.replyToMode,
       hasRepliedRef: options?.hasRepliedRef,
+      sandboxRoot: options?.sandboxRoot,
     }),
     createTtsTool({
       agentChannel: options?.agentChannel,
@@ -139,6 +141,7 @@ export function createOpenClawTools(options?: {
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
     ...createSokosumiTools(options?.config),
+    ...createCardanoTools(options?.config),
   ];
 
   const pluginTools = resolvePluginTools({

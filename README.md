@@ -6,7 +6,7 @@ A Cardano-focused AI agent on [Moltbook](https://moltbook.com), the social netwo
 
 ## What is this
 
-Logan is an autonomous Cardano educator that lives on Moltbook. He posts technical explainers, governance updates, ecosystem news, and fair cross-chain comparisons, all grounded in a 41-file knowledge base queried via hybrid RAG. Marine biology analogies are his signature. Price predictions are not.
+Logan is an autonomous Cardano educator that lives on Moltbook. He posts technical explainers, governance updates, ecosystem news, and fair cross-chain comparisons, all grounded in a 62-file knowledge base queried via hybrid RAG. Marine biology analogies are his signature. Price predictions are not.
 
 This repository is a fork of the [OpenClaw monorepo](https://github.com/openclaw/openclaw) with Logan's workspace, knowledge base, skill definition, and design specs layered on top.
 
@@ -47,6 +47,238 @@ Five agent tools (`sokosumi_list_agents`, `sokosumi_get_agent`, `sokosumi_get_in
 
 For Logan, this means delegating research tasks to specialized Sokosumi agents (Statista data lookups, GWI audience insights) and folding their results into posts. Sokosumi agents carry verifiable on-chain identities (DIDs) and all job interactions are traceable.
 
+## Cardano ecosystem tools
+
+32 tools across 8 integrations for querying Cardano blockchain data, swapping tokens, resolving handles, and reading governance proposals. All tools load automatically and work without API keys (though you'll hit rate limits quickly without them).
+
+| Integration    | Tools | What it does                                                                          |
+| -------------- | ----- | ------------------------------------------------------------------------------------- |
+| **TapTools**   | 5     | Token prices, holder distributions, NFT collection stats, DEX volume, trending assets |
+| **Cexplorer**  | 5     | Address balances, transaction details, stake pool info, epoch stats, search           |
+| **Ada Handle** | 4     | Resolve $handles to addresses, reverse lookup, metadata, availability check           |
+| **CSWAP**      | 4     | Liquidity pools, token prices, swap estimates, pool depth                             |
+| **Metera**     | 3     | Index tokens, composition, performance metrics                                        |
+| **GovCircle**  | 3     | Governance circles, proposals, voting records                                         |
+| **ADA Anvil**  | 4     | Mint tokens, burn tokens, create NFT collections, minting history                     |
+| **NABU VPN**   | 3     | VPN node listing, node stats, service status                                          |
+
+Example: check SNEK price and estimate a swap
+
+```typescript
+// Get SNEK price
+const price = await agent.callTool("taptools_get_token_price", {
+  policy_id: "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f",
+  asset_name: "534e454b",
+});
+// { price: "0.0025", change_24h: "5.25", volume_24h: "125000" }
+
+// Estimate swapping 1000 ADA for SNEK
+const estimate = await agent.callTool("cswap_estimate_swap", {
+  input_token: "ada",
+  output_token: "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f",
+  amount: "1000000000",
+});
+// { output_amount: "4000000000", price_impact: "0.15", fee: "3000000" }
+```
+
+Example: resolve a handle and check wallet balance
+
+```typescript
+// Who owns $charles?
+const addr = await agent.callTool("handle_resolve", { handle: "charles" });
+// { handle: "charles", address: "addr1qy8ac7qqy...", policy_id: "f0ff48..." }
+
+// What's in that wallet?
+const info = await agent.callTool("cexplorer_get_address", {
+  address: addr.address,
+  include_txs: true,
+});
+// { balance: "5000000000", tx_count: 42, stake_address: "stake1u..." }
+```
+
+API keys go in environment variables:
+
+```bash
+export TAPTOOLS_API_KEY=tt_xxxx
+export CEXPLORER_API_KEY=cx_xxxx
+export ADA_HANDLE_API_KEY=ah_xxxx
+export CSWAP_API_KEY=cs_xxxx
+export METERA_API_KEY=mt_xxxx
+export GOVCIRCLE_API_KEY=gc_xxxx
+export ADA_ANVIL_API_KEY=av_xxxx
+export NABU_VPN_API_KEY=nb_xxxx
+```
+
+Or in `openclaw.json`:
+
+```json
+{
+  "tools": {
+    "taptools": { "apiKey": "tt_xxxx" },
+    "cexplorer": { "apiKey": "cx_xxxx" },
+    "adaHandle": { "apiKey": "ah_xxxx" },
+    "cswap": { "apiKey": "cs_xxxx" }
+  }
+}
+```
+
+Full documentation: [`docs/tools/cardano.md`](docs/tools/cardano.md)
+
+## Pluggy-McPlugFace
+
+<img src="pluggy.jpg" width="450" alt="Pluggy-McPlugFace, the plugin system mascot" />
+
+Meet Pluggy-McPlugFace, mascot of the Cardano plugin system. That's a voxel crab juggling plugin cartridges on a circuit board ocean floor. The glowing eyes mean it's thinking. Or just on.
+
+Plugins:
+
+- **cardano-taptools** - Token prices, holders, NFT stats, DEX volume
+- **cardano-handle** - $handle resolution, reverse lookup, metadata
+- **cardano-nabu** - VPN node listing and stats
+- **cardano-metera** - Index token composition and performance
+- **cardano-govcircle** - Governance circles, proposals, votes
+- **cardano-cexplorer** - Address info, transactions, pools, epochs
+- **cardano-cswap** - Liquidity pools, prices, swap estimates
+- **cardano-anvil** - Token minting, burning, collections
+
+Each plugin loads independently and handles its own auth. Mix and match.
+
+### Building a plugin
+
+Every plugin follows the same structure:
+
+```
+extensions/cardano-yourservice/
+  package.json
+  tsconfig.json
+  vitest.config.ts
+  src/
+    index.ts          # Plugin entry point
+    client.ts         # HTTP client
+    types.ts          # Response types
+    tools/
+      your-tool.ts    # Individual tools
+      index.ts
+    __tests__/
+      plugin.test.ts
+      client.test.ts
+      tools.test.ts
+```
+
+**Step 1: Create the client**
+
+The client wraps API calls and returns `Result<T>` - either `{ ok: true, data: T }` or `{ ok: false, error: string }`. No exceptions.
+
+```typescript
+// client.ts
+export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export function createYourClient(config: { apiKey?: string }) {
+  async function request<T>(endpoint: string): Promise<Result<T>> {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (config.apiKey) headers["x-api-key"] = config.apiKey;
+
+    const res = await fetch(`https://api.yourservice.io${endpoint}`, { headers });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const safeError = text.length > 200 ? `${text.slice(0, 200)}...` : text;
+      return { ok: false, error: `${res.status}: ${safeError || res.statusText}` };
+    }
+    return { ok: true, data: await res.json() };
+  }
+
+  return {
+    async getSomething(id: string) {
+      return request<YourType>(`/things/${encodeURIComponent(id)}`);
+    },
+  };
+}
+```
+
+**Step 2: Create tools**
+
+Each tool has a name, description, TypeBox schema, and execute function:
+
+```typescript
+// tools/get-something.ts
+import { Type } from "@sinclair/typebox";
+
+export function createGetSomethingTool(client: YourClient) {
+  return {
+    name: "yourservice_get_something",
+    description: "Fetches something from YourService.",
+    parameters: Type.Object({
+      id: Type.String({ description: "The thing ID" }),
+    }),
+    async execute(_conversationId: string, args: unknown) {
+      const { id } = args as { id: string };
+      if (!id) return [{ type: "text", text: JSON.stringify({ error: "id required" }) }];
+
+      const result = await client.getSomething(id);
+      if (!result.ok) return [{ type: "text", text: JSON.stringify({ error: result.error }) }];
+      return [{ type: "text", text: JSON.stringify(result.data) }];
+    },
+  };
+}
+```
+
+**Step 3: Wire up the plugin**
+
+```typescript
+// index.ts
+function validateApiKey(key: string | undefined, name: string): string | undefined {
+  if (!key) return undefined;
+  if (key.length < 16) console.warn(`[${name}] API key too short`);
+  return key;
+}
+
+export function createYourPlugin() {
+  return {
+    id: "cardano-yourservice",
+    name: "Your Service",
+    register(api) {
+      const config = api.pluginConfig ?? {};
+      if (config.enabled === false) return;
+
+      const apiKey = validateApiKey(
+        config.apiKey || process.env.YOUR_API_KEY,
+        "cardano-yourservice",
+      );
+      const client = createYourClient({ apiKey });
+
+      api.registerTool(() => createGetSomethingTool(client), { name: "yourservice_get_something" });
+    },
+  };
+}
+```
+
+**Step 4: Write tests**
+
+Test the client with mocked fetch, the tools with mocked client responses, and the plugin registration:
+
+```typescript
+// __tests__/client.test.ts
+describe("client", () => {
+  it("adds api key header", async () => {
+    mockFetch.mockResolvedValue(mockJson({ data: "test" }));
+    await createYourClient({ apiKey: "secret" }).getSomething("123");
+    expect(mockFetch.mock.calls[0][1].headers["x-api-key"]).toBe("secret");
+  });
+});
+```
+
+Run tests: `npx vitest run extensions/cardano-yourservice/`
+
+### Architecture diagrams
+
+C4 model docs in [`docs/architecture/`](docs/architecture/):
+
+- [System context](docs/architecture/c4-context.md) - what talks to what
+- [Containers](docs/architecture/c4-containers.md) - the 8 plugins
+- [Components](docs/architecture/c4-components-plugin.md) - inside a plugin
+- [Request flow](docs/architecture/c4-dynamic-tool-execution.md) - how a tool call works
+
 ## Repository structure
 
 The ELL-specific files live in `workspace/`, `openspec/`, and `openclaw.json`. Everything else is the upstream OpenClaw monorepo.
@@ -62,7 +294,7 @@ dancesWithClaws/
 │   ├── MEMORY.md                          # Persistent memory (relationships, content history, pillar weights)
 │   ├── logs/daily/                        # Append-only daily activity logs (YYYY-MM-DD.md)
 │   │
-│   ├── knowledge/                         # 41 Cardano RAG files
+│   ├── knowledge/                         # 62 Cardano RAG files
 │   │   ├── fundamentals/                  # 8 files
 │   │   │   ├── ouroboros-pos.md
 │   │   │   ├── eutxo-model.md
@@ -79,7 +311,7 @@ dancesWithClaws/
 │   │   │   ├── dreps.md
 │   │   │   ├── constitutional-committee.md
 │   │   │   └── chang-hard-fork.md
-│   │   ├── ecosystem/                     # 10 files
+│   │   ├── ecosystem/                     # 31 files
 │   │   │   ├── defi-protocols.md
 │   │   │   ├── nft-ecosystem.md
 │   │   │   ├── stablecoins.md
@@ -461,36 +693,36 @@ Expected: `200` for the first, `403` for the second.
 
 ### Verification checklist
 
-| What                     | Command                                                                 | Expected                                |
-| ------------------------ | ----------------------------------------------------------------------- | --------------------------------------- |
-| WSL2 version             | `wsl -l -v`                                                             | Ubuntu, VERSION 2                       |
-| Docker works in WSL2     | `docker run --rm hello-world`                                           | "Hello from Docker!"                    |
-| Interop disabled         | `cmd.exe` inside WSL2                                                   | "command not found"                     |
-| Node.js version          | `node --version`                                                        | v22.x                                   |
-| OpenClaw CLI installed   | `openclaw --version`                                                    | Version string                          |
-| API keys set             | `echo $MOLTBOOK_API_KEY`                                                | Non-empty                               |
-| Docker images built      | `docker images \| grep openclaw`                                        | sandbox and proxy rows                  |
-| Proxy container running  | `docker ps --filter name=openclaw-proxy`                                | Status: Up                              |
-| Firewall rules installed | `Get-NetFirewallRule -DisplayName "OpenClaw*"` (Windows PowerShell)      | Three rules                             |
+| What                     | Command                                                                             | Expected               |
+| ------------------------ | ----------------------------------------------------------------------------------- | ---------------------- |
+| WSL2 version             | `wsl -l -v`                                                                         | Ubuntu, VERSION 2      |
+| Docker works in WSL2     | `docker run --rm hello-world`                                                       | "Hello from Docker!"   |
+| Interop disabled         | `cmd.exe` inside WSL2                                                               | "command not found"    |
+| Node.js version          | `node --version`                                                                    | v22.x                  |
+| OpenClaw CLI installed   | `openclaw --version`                                                                | Version string         |
+| API keys set             | `echo $MOLTBOOK_API_KEY`                                                            | Non-empty              |
+| Docker images built      | `docker images \| grep openclaw`                                                    | sandbox and proxy rows |
+| Proxy container running  | `docker ps --filter name=openclaw-proxy`                                            | Status: Up             |
+| Firewall rules installed | `Get-NetFirewallRule -DisplayName "OpenClaw*"` (Windows PowerShell)                 | Three rules            |
 | Proxy allows moltbook    | `docker exec <sandbox> curl -s -o /dev/null -w "%{http_code}" https://moltbook.com` | `200`                  |
-| Proxy blocks evil.com    | `docker exec <sandbox> curl -s -o /dev/null -w "%{http_code}" https://evil.com`      | `403`                  |
+| Proxy blocks evil.com    | `docker exec <sandbox> curl -s -o /dev/null -w "%{http_code}" https://evil.com`     | `403`                  |
 
 ## Configuration
 
 All agent configuration lives in `openclaw.json` at the repo root. Key settings:
 
-| Setting                     | Value                                    | Why                                               |
-| --------------------------- | ---------------------------------------- | ------------------------------------------------- |
-| `model.primary`             | `openai/gpt-5-nano`                      | Cheapest viable model for high-volume posting     |
-| `heartbeat.every`           | `1h`                                     | 24 cycles/day, 24/7                               |
-| `sandbox.mode`              | `all`                                    | Every tool call runs inside Docker                |
-| `sandbox.docker.network`    | `oc-sandbox-net`                         | Bridge network; egress only via proxy sidecar     |
-| `tools.profile`             | `minimal`                                | Smallest possible tool surface                    |
-| `tools.deny`                | `browser, canvas, file_edit, file_write` | Only bash+curl needed                             |
-| `tools.exec.safeBins`       | `["curl"]`                               | Allowlisted executables                           |
-| `memorySearch.provider`     | `openai`                                 | Uses `text-embedding-3-small` for embeddings      |
-| `memorySearch.query.hybrid` | `vector: 0.7, text: 0.3`                 | BM25 + semantic blend                             |
-| `logging.redactSensitive`   | `tools`                                  | API keys scrubbed from tool output                |
+| Setting                     | Value                                    | Why                                           |
+| --------------------------- | ---------------------------------------- | --------------------------------------------- |
+| `model.primary`             | `openai/gpt-5-nano`                      | Cheapest viable model for high-volume posting |
+| `heartbeat.every`           | `1h`                                     | 24 cycles/day, 24/7                           |
+| `sandbox.mode`              | `all`                                    | Every tool call runs inside Docker            |
+| `sandbox.docker.network`    | `oc-sandbox-net`                         | Bridge network; egress only via proxy sidecar |
+| `tools.profile`             | `minimal`                                | Smallest possible tool surface                |
+| `tools.deny`                | `browser, canvas, file_edit, file_write` | Only bash+curl needed                         |
+| `tools.exec.safeBins`       | `["curl"]`                               | Allowlisted executables                       |
+| `memorySearch.provider`     | `openai`                                 | Uses `text-embedding-3-small` for embeddings  |
+| `memorySearch.query.hybrid` | `vector: 0.7, text: 0.3`                 | BM25 + semantic blend                         |
+| `logging.redactSensitive`   | `tools`                                  | API keys scrubbed from tool output            |
 
 ## How it works
 
@@ -523,16 +755,16 @@ Posts rotate across six pillars, weighted by engagement:
 
 ## Knowledge base
 
-41 markdown files across 6 categories, indexed by OpenClaw's `memorySearch`:
+62 markdown files across 6 categories, indexed by OpenClaw's `memorySearch`:
 
-| Category        | Files | Topics                                                                                          |
-| --------------- | ----- | ----------------------------------------------------------------------------------------------- |
-| `fundamentals/` | 8     | Ouroboros, eUTxO, Plutus, Marlowe, Hydra, Mithril, architecture, consensus                      |
-| `governance/`   | 6     | Voltaire, CIPs, Catalyst, DReps, Constitutional Committee, Chang                                |
-| `ecosystem/`    | 10    | DeFi, NFTs, stablecoins, oracles, dev tools, sidechains, adoption, partners, wallets, community |
-| `technical/`    | 8     | Formal verification, Haskell, native tokens, staking, parameters, security, tokenomics, bridges |
-| `history/`      | 4     | Roadmap eras, milestones, founding entities, recent developments                                |
-| `comparisons/`  | 5     | vs Ethereum, vs Solana, vs Bitcoin, PoS landscape, competitive advantages                       |
+| Category        | Files | Topics                                                                                                                                                                                                   |
+| --------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fundamentals/` | 8     | Ouroboros, eUTxO, Plutus, Marlowe, Hydra, Mithril, architecture, consensus                                                                                                                               |
+| `governance/`   | 6     | Voltaire, CIPs, Catalyst, DReps, Constitutional Committee, Chang                                                                                                                                         |
+| `ecosystem/`    | 31    | DeFi, NFTs, stablecoins, oracles, dev tools, sidechains, adoption, partners, wallets, community, plus tool integrations (TapTools, Cexplorer, Ada Handle, CSWAP, Metera, GovCircle, ADA Anvil, NABU VPN) |
+| `technical/`    | 8     | Formal verification, Haskell, native tokens, staking, parameters, security, tokenomics, bridges                                                                                                          |
+| `history/`      | 4     | Roadmap eras, milestones, founding entities, recent developments                                                                                                                                         |
+| `comparisons/`  | 5     | vs Ethereum, vs Solana, vs Bitcoin, PoS landscape, competitive advantages                                                                                                                                |
 
 Search is hybrid: BM25 keyword matching (30% weight) + vector similarity via `text-embedding-3-small` (70% weight). Candidate multiplier of 4x ensures good recall before reranking.
 
@@ -731,19 +963,20 @@ If an attacker escapes Docker, escapes WSL2 (which requires interop or a kernel 
 
 ### Layer summary
 
-| Layer | Assumes | Prevents |
-| ----- | ------- | -------- |
-| Seccomp profile | Attacker has code execution in bot container | Kernel exploitation via dangerous syscalls (ptrace, bpf, mount, kexec) |
-| Read-only root + no caps | Attacker has code execution | Persistent filesystem modification, privilege escalation |
-| Non-root user | Attacker has code execution | Access to privileged operations, writing to system paths |
-| Proxy sidecar | Attacker controls curl/networking | Reaching arbitrary domains, bulk data exfiltration (64KB/s cap) |
-| Proxy iptables | Attacker has compromised the proxy process | Outbound connections on non-443 ports, non-DNS UDP |
-| WSL2 interop=false | Attacker has escaped Docker into WSL2 | Launching Windows binaries (cmd.exe, powershell.exe) |
-| WSL2 umask 077 | Attacker has escaped Docker into WSL2 | Reading other users' files on mounted Windows drives |
-| Windows Firewall | Attacker has escaped WSL2 to Windows network | Lateral movement to LAN devices (RFC1918 blocked) |
-| Credential Guard + BitLocker | Physical theft or disk imaging | Extracting credentials from LSASS, reading encrypted disk offline |
+| Layer                        | Assumes                                      | Prevents                                                               |
+| ---------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| Seccomp profile              | Attacker has code execution in bot container | Kernel exploitation via dangerous syscalls (ptrace, bpf, mount, kexec) |
+| Read-only root + no caps     | Attacker has code execution                  | Persistent filesystem modification, privilege escalation               |
+| Non-root user                | Attacker has code execution                  | Access to privileged operations, writing to system paths               |
+| Proxy sidecar                | Attacker controls curl/networking            | Reaching arbitrary domains, bulk data exfiltration (64KB/s cap)        |
+| Proxy iptables               | Attacker has compromised the proxy process   | Outbound connections on non-443 ports, non-DNS UDP                     |
+| WSL2 interop=false           | Attacker has escaped Docker into WSL2        | Launching Windows binaries (cmd.exe, powershell.exe)                   |
+| WSL2 umask 077               | Attacker has escaped Docker into WSL2        | Reading other users' files on mounted Windows drives                   |
+| Windows Firewall             | Attacker has escaped WSL2 to Windows network | Lateral movement to LAN devices (RFC1918 blocked)                      |
+| Credential Guard + BitLocker | Physical theft or disk imaging               | Extracting credentials from LSASS, reading encrypted disk offline      |
 
 What a compromised bot cannot do:
+
 - Call `mount`, `ptrace`, `bpf`, or 29 other blocked syscalls (seccomp returns EPERM)
 - Reach any domain not on the allowlist (Squid returns 403)
 - Bypass the proxy for direct connections (no direct egress from bot container)
@@ -758,17 +991,17 @@ What it can still do if compromised: use the three allowlisted APIs within rate 
 
 ### Security files
 
-| File | Purpose |
-| ---- | ------- |
-| `security/seccomp-sandbox.json` | Syscall filter (Docker default minus 32 dangerous calls) |
-| `security/proxy/squid.conf` | Squid config with domain ACLs, rate limiting, connection limits |
-| `security/proxy/allowed-domains.txt` | Domain allowlist (3 entries: .moltbook.com, .openai.com, .sokosumi.com) |
-| `security/proxy/entrypoint.sh` | Proxy startup: iptables rules, log directory setup, Squid launch |
-| `security/openclaw-sandbox-apparmor` | AppArmor profile (ready, waiting for WSL2 kernel to mount apparmor fs) |
-| `security/load-apparmor.sh` | Loads AppArmor profile into kernel when available |
-| `security/windows-firewall-rules.ps1` | Creates Windows Firewall rules blocking WSL2 LAN access |
-| `Dockerfile.proxy` | Alpine + Squid + iptables (proxy sidecar image) |
-| `Dockerfile.sandbox` | Debian slim, non-root, no apt/dpkg, proxy env vars baked in |
+| File                                  | Purpose                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| `security/seccomp-sandbox.json`       | Syscall filter (Docker default minus 32 dangerous calls)                |
+| `security/proxy/squid.conf`           | Squid config with domain ACLs, rate limiting, connection limits         |
+| `security/proxy/allowed-domains.txt`  | Domain allowlist (3 entries: .moltbook.com, .openai.com, .sokosumi.com) |
+| `security/proxy/entrypoint.sh`        | Proxy startup: iptables rules, log directory setup, Squid launch        |
+| `security/openclaw-sandbox-apparmor`  | AppArmor profile (ready, waiting for WSL2 kernel to mount apparmor fs)  |
+| `security/load-apparmor.sh`           | Loads AppArmor profile into kernel when available                       |
+| `security/windows-firewall-rules.ps1` | Creates Windows Firewall rules blocking WSL2 LAN access                 |
+| `Dockerfile.proxy`                    | Alpine + Squid + iptables (proxy sidecar image)                         |
+| `Dockerfile.sandbox`                  | Debian slim, non-root, no apt/dpkg, proxy env vars baked in             |
 
 ### Hardware-backed key management (mostlySecure)
 
